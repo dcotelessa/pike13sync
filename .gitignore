@@ -1,0 +1,66 @@
+# Go build files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/bin/
+/pkg/
+
+# Dependency directories
+/vendor/
+
+# Environment variables and credentials
+.env
+.env.*
+*.env
+credentials/
+credentials.json
+pike13_credentials.json
+*credentials*.json
+
+# Log files that may contain personal information
+logs/
+*.log
+pike13_response.json
+*.log.*
+
+# Terraform/OpenTofu state files
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+.terraform.tfstate.lock.info
+*.tfvars
+terraform.log
+
+# Test coverage diata
+/coverage/
+*.cov
+coverage.*
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+tmp/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+.directory
+.Trash-*
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+logs
