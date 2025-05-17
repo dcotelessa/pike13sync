@@ -1,4 +1,21 @@
-# Synology NAS Deployment Guide for Pike13Sync
+## Log Management
+
+Pike13Sync is configured to automatically rotate logs to prevent them from growing too large over time. The log rotation is set up as follows:
+
+- Both application logs (`pike13sync.log`) and cron logs (`cron_run.log`) are rotated
+- Logs are rotated daily
+- 7 days of logs are kept (older logs are deleted)
+- Rotated logs are compressed to save space
+- Empty log files are not rotated
+
+This configuration ensures that logs won't consume excessive space on your NAS while still maintaining recent history for troubleshooting.
+
+You can check the log rotation configuration at:
+```bash
+cat /etc/logrotate.d/pike13sync
+```
+
+If you need to modify the log rotation settings, you can edit this file directly on your NAS or update the template in `deployment/templates/pike13sync.logrotate.tpl` and reapply the Terraform configuration.# Synology NAS Deployment Guide for Pike13Sync
 
 This guide walks you through deploying Pike13Sync on your Synology NAS using Terraform.
 

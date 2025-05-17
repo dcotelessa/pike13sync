@@ -1,4 +1,49 @@
-# Main Terraform configuration file for Pike13Sync deployment
+# Configure log rotation on NAS
+resource "null_resource" "setup_logrotate" {
+  depends_on = [null_resource.deploy_files]
+
+  # Create logrotate config file from template
+  provisioner "local-exec" {
+    command = "mkdir -p ${path.module}/generated"
+  }
+
+  provisioner "local_file" {
+    content = templatefile("${path.module}/templates/pike13sync.logrotate.tpl", {
+      app_path = var.nas_app_path
+    })
+    filename        = "${path.module}/generated/pike13sync.logrotate"
+    file_permission = "0644"
+  }
+
+  # Copy and install logrotate config
+  provisioner "file" {
+    connection {
+      type        = "ssh"
+      user        = var.nas_username
+      host        = var.nas_hostname
+      port        = var.nas_ssh_port
+      private_key = file(var.ssh_private_key_path)
+    }
+
+    source      = "${path.module}/generated/pike13sync.logrotate"
+    destination = "/tmp/pike13sync.logrotate"
+  }
+
+  provisioner "remote-exec" {
+    connection {
+      type        = "ssh"
+      user        = var.nas_username
+      host        = var.nas_hostname
+      port        = var.nas_ssh_port
+      private_key = file(var.ssh_private_key_path)
+    }
+
+    inline = [
+      "sudo mv /tmp/pike13sync.logrotate /etc/logrotate.d/pike13sync",
+      "sudo chmod 644 /etc/logrotate.d/pike13sync"
+    ]
+  }
+}# Main Terraform configuration file for Pike13Sync deployment
 
 terraform {
   required_version = ">= 1.0.0"
