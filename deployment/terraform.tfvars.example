@@ -1,0 +1,36 @@
+# Example Terraform variables for Pike13Sync deployment
+# Copy this file to terraform.tfvars and update with your real values
+
+# Synology NAS connection details
+nas_hostname         = "nas.example.com"  # Your NAS hostname or IP
+nas_ssh_port         = 22                 # SSH port (usually 22)
+nas_username         = "admin"            # SSH username
+ssh_private_key_path = "~/.ssh/id_rsa"    # Path to SSH private key
+nas_app_path         = "/volume1/docker/pike13sync" # Deployment path
+
+# Pike13Sync configuration
+pike13_client_id          = "YOUR_PIKE13_CLIENT_ID"   # From Pike13
+calendar_id               = "YOUR_CALENDAR_ID@group.calendar.google.com" # From Google Calendar
+timezone                  = "America/Los_Angeles"     # Your timezone
+sync_schedule             = "0 * * * *"               # Run hourly (cron format)
+dry_run                   = false                     # Set to true for testing
+debug_mode                = false                     # Enable detailed logging
+sync_days_ahead           = 14                        # Days to sync into future
+sync_days_behind          = 7                         # Days to sync from past
+pike13_url                = "https://yourstudio.pike13.com/api/v2/front/event_occurrences.json" # Your studio's Pike13 URL
+
+# Google credentials (paste your entire credentials.json content)
+google_credentials_content = <<-EOT
+{
+  "type": "service_account",
+  "project_id": "YOUR_PROJECT_ID",
+  "private_key_id": "YOUR_PRIVATE_KEY_ID",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_CONTENT\n-----END PRIVATE KEY-----\n",
+  "client_email": "YOUR_SERVICE_ACCOUNT_EMAIL",
+  "client_id": "YOUR_CLIENT_ID",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "YOUR_CLIENT_CERT_URL"
+}
+EOT

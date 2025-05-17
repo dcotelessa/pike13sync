@@ -1,0 +1,28 @@
+# .gitignore for deployment files
+
+# Terraform state files
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+.terraform.tfstate.lock.info
+
+# Local .terraform directories
+**/.terraform/*
+
+# Terraform logs
+*.log
+crash.log
+
+# Actual variable files (contain sensitive information)
+terraform.tfvars
+
+# Generated files
+generated/
+
+# Exclude .tfvars files that are meant to be shared
+!terraform.tfvars.example
+
+# Sensitive Data
+credentials.json
+.env
