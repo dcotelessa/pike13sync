@@ -15,14 +15,25 @@ import (
 
 // Client handles interactions with Pike13 API
 type Client struct {
-	config *config.Config
+	config     *config.Config
+	testHeader map[string]string // For testing purposes only
 }
 
 // NewClient creates a new Pike13 client
 func NewClient(config *config.Config) *Client {
 	return &Client{
-		config: config,
+		config:     config,
+		testHeader: make(map[string]string),
 	}
+}
+
+// SetTestHeader sets a header for testing purposes
+// This is only used in tests and is not part of the normal API
+func (c *Client) SetTestHeader(key, value string) {
+	if c.testHeader == nil {
+		c.testHeader = make(map[string]string)
+	}
+	c.testHeader[key] = value
 }
 
 // FetchEvents retrieves events from Pike13 API
@@ -56,6 +67,11 @@ func (c *Client) FetchEvents(fromDate, toDate string) (Pike13Response, error) {
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 	req.Header.Add("Accept", "application/json")
 	
+	// Add test headers if any (for testing only)
+	for k, v := range c.testHeader {
+		req.Header.Add(k, v)
+	}
+	
 	// Send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -77,10 +93,12 @@ func (c *Client) FetchEvents(fromDate, toDate string) (Pike13Response, error) {
 	}
 	
 	// Save a copy of the raw JSON for debugging
-	logDir := filepath.Dir(c.config.LogPath)
-	err = os.WriteFile(filepath.Join(logDir, "pike13_response.json"), body, 0644)
-	if err != nil {
-		log.Printf("Warning: Could not save raw API response: %v", err)
+	if c.config.LogPath != "" {
+		logDir := filepath.Dir(c.config.LogPath)
+		err = os.WriteFile(filepath.Join(logDir, "pike13_response.json"), body, 0644)
+		if err != nil {
+			log.Printf("Warning: Could not save raw API response: %v", err)
+		}
 	}
 	
 	err = json.Unmarshal(body, &response)

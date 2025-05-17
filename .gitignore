@@ -24,6 +24,7 @@ pike13_credentials.json
 # Log files that may contain personal information
 logs/
 *.log
+config.json
 pike13_response.json
 *.log.*
 

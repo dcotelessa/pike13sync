@@ -17,14 +17,23 @@ type SyncStats struct {
 	Skipped int
 }
 
+// Define an interface for the calendar service so we can mock it in tests
+type CalendarServiceInterface interface {
+	GetExistingEvents() ([]*calendar.Event, error)
+	FormatEventData(pike13.Pike13Event) *calendar.Event
+	CreateEvent(*calendar.Event)
+	UpdateEvent(*calendar.Event, *calendar.Event) string
+	DeleteEvent(*calendar.Event)
+}
+
 // SyncService handles synchronization between Pike13 and Google Calendar
 type SyncService struct {
-	calendarService *calendar.Service
+	calendarService CalendarServiceInterface
 	config          *config.Config
 }
 
 // NewSyncService creates a new sync service
-func NewSyncService(calendarService *calendar.Service, config *config.Config) *SyncService {
+func NewSyncService(calendarService CalendarServiceInterface, config *config.Config) *SyncService {
 	return &SyncService{
 		calendarService: calendarService,
 		config:          config,

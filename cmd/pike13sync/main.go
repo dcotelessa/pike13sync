@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/dcotelessa/pike13sync/internal/calendar"
@@ -14,8 +15,19 @@ import (
 )
 
 func main() {
+	// Look for a .env file in the project root and load it
+	envFile := ""
+	
+	// Allow specifying alternative .env file via ENV_FILE environment variable
+	if customEnvFile := os.Getenv("ENV_FILE"); customEnvFile != "" {
+		envFile = customEnvFile
+	}
+	
 	// Load environment variables from .env file
-	util.LoadEnvFile(".env")
+	if err := util.LoadEnvFile(envFile); err != nil {
+		fmt.Printf("Error loading .env file: %v\n", err)
+		fmt.Println("Continuing with existing environment variables")
+	}
 
 	// Setup logging
 	logFile, err := util.SetupLogging()
@@ -97,6 +109,13 @@ func main() {
 
 func calculateDateRange(testFrom, testTo string) (string, string) {
 	if testFrom != "" && testTo != "" {
+		// Add time component if missing
+		if len(testFrom) == 10 {
+			testFrom += "T00:00:00Z"
+		}
+		if len(testTo) == 10 {
+			testTo += "T00:00:00Z"
+		}
 		return testFrom, testTo
 	}
 
