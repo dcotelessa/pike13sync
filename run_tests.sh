@@ -20,6 +20,53 @@ NC='\033[0m' # No Color
 echo -e "${YELLOW}Running pike13sync tests...${NC}"
 echo -e "${YELLOW}=============================${NC}"
 
+# Set up test environment
+setup_test_env() {
+  # Store original environment variables to restore later
+  export ORIGINAL_PIKE13_CLIENT_ID="$PIKE13_CLIENT_ID"
+  export ORIGINAL_PIKE13_URL="$PIKE13_URL"
+  export ORIGINAL_CALENDAR_ID="$CALENDAR_ID"
+  
+  # Set test environment variables if not already set
+  if [ -z "$PIKE13_CLIENT_ID" ]; then
+    export PIKE13_CLIENT_ID="test_client_id"
+    echo -e "${YELLOW}Setting test PIKE13_CLIENT_ID environment variable${NC}"
+  fi
+  
+  if [ -z "$PIKE13_URL" ]; then
+    export PIKE13_URL="https://test.pike13.com/api/v2/front/event_occurrences.json"
+    echo -e "${YELLOW}Setting test PIKE13_URL environment variable${NC}"
+  fi
+  
+  if [ -z "$CALENDAR_ID" ]; then
+    export CALENDAR_ID="test_calendar@group.calendar.google.com"
+    echo -e "${YELLOW}Setting test CALENDAR_ID environment variable${NC}"
+  fi
+  
+  # Set test mode flag
+  export TEST_MODE=true
+  
+  # Create necessary directories for tests
+  mkdir -p ./config
+  mkdir -p ./credentials
+  mkdir -p ./logs
+  
+  echo -e "${YELLOW}Test environment set up${NC}"
+}
+
+# Restore original environment
+restore_env() {
+  export PIKE13_CLIENT_ID="$ORIGINAL_PIKE13_CLIENT_ID"
+  export PIKE13_URL="$ORIGINAL_PIKE13_URL"
+  export CALENDAR_ID="$ORIGINAL_CALENDAR_ID"
+  unset TEST_MODE
+  unset ORIGINAL_PIKE13_CLIENT_ID
+  unset ORIGINAL_PIKE13_URL
+  unset ORIGINAL_CALENDAR_ID
+  
+  echo -e "${YELLOW}Original environment restored${NC}"
+}
+
 # Create a coverage profile directory if it doesn't exist
 mkdir -p ./coverage
 
@@ -41,6 +88,9 @@ run_tests() {
   fi
 }
 
+# Set up test environment
+setup_test_env
+
 # Run all tests
 FAILED=0
 
@@ -60,6 +110,9 @@ if [ $? -ne 0 ]; then
 else
   echo -e "${GREEN}✓ Tests in ./tests passed!${NC}"
 fi
+
+# Restore original environment
+restore_env
 
 # Merge coverage profiles
 echo -e "${YELLOW}Merging coverage reports...${NC}"
