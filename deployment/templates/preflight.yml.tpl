@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -233,7 +233,14 @@ jobs:
           echo "GitHub Actions environment:"
           echo "Ubuntu version: $(lsb_release -d)"
           echo "Go version: $(go version)"
-          echo "Docker version: $(docker --version)"
           echo "Working directory: $(pwd)"
           echo "Directory listing:"
           ls -la
+          
+      - name: Upload test logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: pike13sync-preflight-logs
+          path: |
+            logs/
+          retention-days: 7

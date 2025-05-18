@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -95,7 +95,7 @@ jobs:
           echo "unchanged=$UNCHANGED" >> $GITHUB_OUTPUT
           
       - name: Upload logs as artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pike13sync-logs
           path: |
