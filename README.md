@@ -1,3 +1,12 @@
+# Pike13Sync Documentation
+
+This artifact contains two README files for the Pike13Sync project:
+
+1. `README.md` - The main project README with GitHub Actions integration
+2. `.github/workflows/README.md` - Specific documentation for GitHub Actions workflows
+
+---
+
 # Pike13Sync: Fitness Studio Calendar Synchronization
 
 Pike13Sync is a Go application that synchronizes class schedules from the Pike13 studio management system to Google Calendar. This tool helps fitness studio owners and administrators keep their Google Calendar up-to-date with class schedules automatically.
@@ -14,13 +23,16 @@ Pike13Sync is a Go application that synchronizes class schedules from the Pike13
   - [Running Locally](#running-locally)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
-  - [Synology NAS Deployment](#synology-nas-deployment)
+  - [GitHub Actions Deployment](#github-actions-deployment)
 - [Automation](#automation)
   - [Setting up a Cron Job](#setting-up-a-cron-job)
   - [Docker Scheduling](#docker-scheduling)
+  - [GitHub Actions Scheduling](#github-actions-scheduling)
+- [Log Management](#log-management)
 - [Usage](#usage)
   - [Command Line Options](#command-line-options)
   - [Example Commands](#example-commands)
+- [Monitoring and Notifications](#monitoring-and-notifications)
 - [Troubleshooting](#troubleshooting)
   - [Common Issues](#common-issues)
   - [Logging](#logging)
@@ -31,7 +43,7 @@ Pike13Sync is a Go application that synchronizes class schedules from the Pike13
 
 ## Overview
 
-Pike13Sync connects to your Pike13 account API, fetches upcoming class schedule data, and synchronizes it to a specified Google Calendar. It can be run manually, as a scheduled task, or continuously as a Docker container.
+Pike13Sync connects to your Pike13 account API, fetches upcoming class schedule data, and synchronizes it to a specified Google Calendar. It can be run manually, as a scheduled task, or automatically via GitHub Actions.
 
 ## Features
 
@@ -40,16 +52,17 @@ Pike13Sync connects to your Pike13 account API, fetches upcoming class schedule 
 - Color-coding for class status (active vs. canceled)
 - Dry run mode for testing without making changes
 - Docker support for easy deployment
+- GitHub Actions integration for serverless operation
 - Detailed logging for troubleshooting
+- Automatic log rotation to prevent filesystem bloat
 
 ## Prerequisites
 
 - Go 1.20+ (for local development)
-- Docker (for containerized deployment)
+- GitHub account (for GitHub Actions deployment)
 - Pike13 account with API access
 - Google Cloud account with Calendar API enabled
 - Service account credentials for Google Calendar API
-- Terraform/OpenTofu (for NAS deployment)
 
 ## Local Setup
 
@@ -161,31 +174,123 @@ To run in dry-run mode (no actual changes to Google Calendar):
    docker-compose up -d
    ```
 
-### Synology NAS Deployment
+### GitHub Actions Deployment
 
-You can use Terraform/OpenTofu to deploy Pike13Sync to your Synology NAS:
+Pike13Sync can be deployed as a fully serverless solution using GitHub Actions. This method requires no server management and runs on GitHub's infrastructure.
 
-1. Install Terraform or OpenTofu on your development machine.
+#### Setting Up GitHub Actions Deployment
 
-2. Set up the deployment environment by filling in the deployment templates:
+1. **Create a GitHub Repository**
+   - Create a new repository or use an existing one
+   - Push your Pike13Sync code to the repository
 
-   - Update `deployment/variables.tf` with your NAS information
-   - Update `deployment/terraform.tfvars` with your specific values
-   - Configure Docker in DSM on your Synology NAS
+2. **Add GitHub Secrets**
+   - Go to your repository Settings > Secrets and variables > Actions
+   - Add the following repository secrets:
+     - `GOOGLE_CREDENTIALS`: Your entire Google credentials.json content
+     - `PIKE13_CLIENT_ID`: Your Pike13 Client ID
+     - `CALENDAR_ID`: Your Google Calendar ID
 
-3. Initialize and apply the Terraform configuration:
-   ```bash
-   cd deployment
-   terraform init
-   terraform plan
-   terraform apply
+3. **Create Workflow Files**
+   - Create a directory `.github/workflows/` in your repository
+   - Add the following workflow files:
+     - `preflight.yml`: For testing connections
+     - `sync.yml`: For the actual synchronization process
+
+4. **Preflight Workflow Example**
+   ```yaml
+   name: Pike13Sync Preflight Test
+
+   on:
+     workflow_dispatch:
+
+   jobs:
+     preflight:
+       runs-on: ubuntu-latest
+       steps:
+         - name: Check out repository
+           uses: actions/checkout@v3
+
+         - name: Set up Go
+           uses: actions/setup-go@v4
+           with:
+             go-version: '1.21'
+           
+         - name: Create directory structure
+           run: |
+             mkdir -p config
+             mkdir -p credentials
+             mkdir -p logs
+
+         - name: Set up credentials
+           run: |
+             echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials/credentials.json
+             chmod 600 credentials/credentials.json
+             echo '{"client_id": "${{ secrets.PIKE13_CLIENT_ID }}"}' > credentials/pike13_credentials.json
+
+         - name: Test API connections
+           run: |
+             go mod tidy
+             go run cmd/pike13sync/main.go --sample
    ```
 
-   The terraform scripts will:
-   - Copy the necessary files to your NAS
-   - Set up a Docker container on your NAS
-   - Configure environment variables
-   - Set up a scheduled task for regular execution
+5. **Full Sync Workflow Example**
+   ```yaml
+   name: Pike13 to Google Calendar Sync
+
+   on:
+     workflow_dispatch:
+       inputs:
+         dry_run:
+           description: 'Run in dry-run mode (no actual changes)'
+           required: false
+           default: 'false'
+           type: choice
+           options:
+             - 'true'
+             - 'false'
+     schedule:
+       - cron: '0 2 * * *'  # Run daily at 2 AM UTC
+
+   jobs:
+     sync:
+       runs-on: ubuntu-latest
+       steps:
+         - name: Check out repository
+           uses: actions/checkout@v3
+
+         - name: Set up Go
+           uses: actions/setup-go@v4
+           with:
+             go-version: '1.21'
+           
+         - name: Create directory structure
+           run: |
+             mkdir -p config
+             mkdir -p credentials
+             mkdir -p logs
+
+         - name: Set up credentials
+           run: |
+             echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials/credentials.json
+             chmod 600 credentials/credentials.json
+             echo '{"client_id": "${{ secrets.PIKE13_CLIENT_ID }}"}' > credentials/pike13_credentials.json
+
+         - name: Run Pike13Sync
+           id: sync
+           run: |
+             ARGS=""
+             if [ "${{ github.event.inputs.dry_run || 'false' }}" == "true" ]; then
+               ARGS="$ARGS --dry-run"
+             fi
+             go run cmd/pike13sync/main.go $ARGS
+   ```
+
+6. **Run the Workflows**
+   - Go to the "Actions" tab in your repository
+   - First, run the preflight test to verify connectivity
+   - Then, run the full sync workflow with dry-run mode enabled to test
+   - Finally, run the full sync workflow without dry-run to perform the actual sync
 
 ## Automation
 
@@ -204,16 +309,6 @@ To run Pike13Sync automatically on a schedule:
    0 * * * * cd /path/to/pike13sync && ./run.sh >> ./logs/cron.log 2>&1
    ```
 
-For a Synology NAS, you can set up a scheduled task in Control Panel:
-
-1. Open Control Panel > Task Scheduler
-2. Create a new Scheduled Task > User-defined script
-3. Set your schedule (e.g., hourly)
-4. In the Task Settings, enter:
-   ```bash
-   cd /volume1/docker/pike13sync && docker-compose up
-   ```
-
 ### Docker Scheduling
 
 For a Docker-based scheduled execution, use Docker's restart policy:
@@ -228,6 +323,67 @@ services:
     command: /app/pike13sync
     # ... other settings ...
 ```
+
+### GitHub Actions Scheduling
+
+GitHub Actions provides built-in scheduling through the workflow file:
+
+```yaml
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+    
+    # Alternative: Run every 6 hours
+    # - cron: '0 */6 * * *'
+    
+    # Alternative: Run at 8 AM and 8 PM UTC
+    # - cron: '0 8,20 * * *'
+```
+
+Considerations for GitHub Actions scheduling:
+- Times are in UTC
+- Schedule precision is not guaranteed (may delay by up to 15 minutes)
+- GitHub will disable scheduled workflows if the repo has no activity for 60 days
+
+## Log Management
+
+### Local and Docker Log Management
+
+Pike13Sync creates logs in the `./logs` directory:
+
+- `pike13sync.log`: Main application log
+- `pike13_response.json`: Raw response from Pike13 API (for debugging)
+- `cron_run.log`: Output from scheduled runs
+
+To increase logging verbosity, use the `--debug` flag:
+
+```bash
+./run.sh --debug
+```
+
+### GitHub Actions Log Management
+
+When running on GitHub Actions, logs are automatically captured and available in the Actions tab:
+
+1. Go to your repository's Actions tab
+2. Click on the specific workflow run
+3. View logs for each step
+
+For long-term log storage, you can add this to your workflow:
+
+```yaml
+- name: Upload logs as artifacts
+  uses: actions/upload-artifact@v3
+  with:
+    name: pike13sync-logs
+    path: |
+      logs/
+      sync_output.txt
+    retention-days: 14
+```
+
+This will save logs as artifacts for 14 days (adjustable).
 
 ## Usage
 
@@ -261,6 +417,55 @@ Pike13Sync offers several command-line options:
 ./run.sh --debug
 ```
 
+## Monitoring and Notifications
+
+### Email Notifications for GitHub Actions
+
+Add this to your workflow for email notifications:
+
+```yaml
+- name: Send email notification on failure
+  if: failure()
+  uses: dawidd6/action-send-mail@v3
+  with:
+    server_address: ${{ secrets.MAIL_SERVER }}
+    server_port: ${{ secrets.MAIL_PORT }}
+    username: ${{ secrets.MAIL_USERNAME }}
+    password: ${{ secrets.MAIL_PASSWORD }}
+    subject: Pike13Sync Failed
+    body: The Pike13Sync job has failed. See details at https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    to: ${{ secrets.NOTIFICATION_EMAIL }}
+    from: Pike13Sync Notifications
+```
+
+### Slack Notifications
+
+For Slack notifications:
+
+```yaml
+- name: Slack Notification
+  uses: rtCamp/action-slack-notify@v2
+  env:
+    SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+    SLACK_CHANNEL: pike13-sync-status
+    SLACK_COLOR: ${{ job.status == 'success' && 'good' || 'danger' }}
+    SLACK_TITLE: Pike13Sync Result
+    SLACK_MESSAGE: Pike13Sync completed with status: ${{ job.status }}
+```
+
+### Job Summary
+
+```yaml
+- name: Create job summary
+  run: |
+    echo "## Pike13Sync Summary" >> $GITHUB_STEP_SUMMARY
+    echo "" >> $GITHUB_STEP_SUMMARY
+    echo "Events created: ${{ steps.sync.outputs.created }}" >> $GITHUB_STEP_SUMMARY
+    echo "Events updated: ${{ steps.sync.outputs.updated }}" >> $GITHUB_STEP_SUMMARY
+    echo "Events deleted: ${{ steps.sync.outputs.deleted }}" >> $GITHUB_STEP_SUMMARY
+    echo "Events unchanged: ${{ steps.sync.outputs.unchanged }}" >> $GITHUB_STEP_SUMMARY
+```
+
 ## Troubleshooting
 
 ### Common Issues
@@ -280,25 +485,20 @@ Pike13Sync offers several command-line options:
    - Verify the service account has write permissions
    - Check for error messages in the logs
 
-4. **"Application Client ID is required" Error**:
-   - Ensure your Pike13 client ID is correctly set in `.env` or credentials file
-
-5. **"Error accessing specified calendar" Error**:
-   - Verify your calendar ID is correct
-   - Ensure the service account has been granted access to your calendar
+4. **GitHub Actions Issues**:
+   - Verify secrets are correctly set up
+   - Check workflow logs for errors
+   - Make sure Go version is compatible (1.20 or newer)
 
 ### Logging
-
-Pike13Sync creates logs in the `./logs` directory:
-
-- `pike13sync.log`: Main application log
-- `pike13_response.json`: Raw response from Pike13 API (for debugging)
 
 To increase logging verbosity, use the `--debug` flag:
 
 ```bash
 ./run.sh --debug
 ```
+
+In GitHub Actions, check the detailed logs in the workflow run view.
 
 ### Testing Connectivity
 
@@ -334,19 +534,11 @@ This will:
    docker rmi pike13sync
    ```
 
-### Terraform/NAS Cleanup
+### GitHub Actions Cleanup
 
-1. Run Terraform destroy:
-   ```bash
-   cd deployment
-   terraform destroy
-   ```
-
-2. Manually delete any remaining files from your NAS:
-   - SSH to your NAS and navigate to the installation directory
-   - Remove the application directory: `rm -rf /volume1/docker/pike13sync`
-
-3. If created, remove the scheduled task from Synology Task Scheduler.
+1. Go to the repository settings
+2. Delete the GitHub repository secrets
+3. Delete or disable the workflow files in `.github/workflows/`
 
 ### Manual Cleanup
 

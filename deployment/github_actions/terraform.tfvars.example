@@ -1,0 +1,34 @@
+# GitHub Configuration
+github_token         = "your_github_personal_access_token"
+github_owner         = "your_github_username"
+repository_name      = "pike13sync"
+repository_branch    = "main"
+create_repository    = true
+repository_visibility = "private"
+commit_email         = "your.email@example.com"
+
+# Pike13Sync Configuration
+google_credentials_json = <<EOT
+{
+  "type": "service_account",
+  "project_id": "your_project_id",
+  ... rest of your credentials JSON ...
+}
+EOT
+pike13_client_id     = "your_pike13_client_id"
+calendar_id          = "your_calendar_id@group.calendar.google.com"
+go_version           = "1.21"
+sync_schedule        = "0 2 * * *"  # Daily at 2 AM UTC
+
+# Email Notifications (Optional)
+enable_email_notifications = false
+mail_server          = "smtp.example.com"
+mail_port            = "587"
+mail_username        = "your_email@example.com"
+mail_password        = "your_email_app_password"
+notification_email   = "recipient@example.com"
+
+# Slack Notifications (Optional)
+enable_slack_notifications = false
+slack_webhook        = "https://hooks.slack.com/services/your/webhook/url"
+slack_channel        = "pike13sync-status"
