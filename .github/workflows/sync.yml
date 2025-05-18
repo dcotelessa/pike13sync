@@ -21,9 +21,9 @@ on:
           - 'true'
           - 'false'
   
-  # Run on a schedule (daily at 2 AM UTC)
+  # Run on a schedule (every hour starting 6 AM - 8PM)
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '45 6,7,8,9,10,18,19,20 * * *'
 
 jobs:
   sync:
