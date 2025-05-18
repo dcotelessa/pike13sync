@@ -31,12 +31,6 @@ jobs:
           echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials/credentials.json
           chmod 600 credentials/credentials.json
 
-      - name: Verify Google credentials file
-        run: |
-          echo "Verifying credentials file..."
-          ls -l credentials/
-          cat credentials/credentials.json || echo "Failed to read credentials.json"
-
       - name: Set up Pike13 credentials
         run: |
           echo '{"client_id": "${{ secrets.PIKE13_CLIENT_ID }}"}' > credentials/pike13_credentials.json
@@ -52,6 +46,10 @@ jobs:
 
       - name: Test Google Calendar API Connection
         run: |
+          # Create a separate directory for the Google Calendar test
+          mkdir -p test_calendar
+          cd test_calendar
+          
           # Create a simple test script to check Google Calendar API connectivity
           cat > test_calendar.go << EOF
           package main
@@ -71,7 +69,7 @@ jobs:
             ctx := context.Background()
             
             // Read credentials from file
-            credBytes, err := os.ReadFile("./credentials/credentials.json")
+            credBytes, err := os.ReadFile("../credentials/credentials.json")
             if err != nil {
               fmt.Printf("Error reading credentials file: %v\n", err)
               os.Exit(1)
@@ -128,15 +126,19 @@ jobs:
           }
           EOF
           
-          # Run the test script
-          go mod init test
+          # Initialize Go module and run the test script
+          go mod init test_calendar
           go get golang.org/x/oauth2/google
           go get google.golang.org/api/calendar/v3
           go get google.golang.org/api/option
-          go run test_calendar.go
+          CALENDAR_ID="${{ secrets.CALENDAR_ID }}" go run test_calendar.go
 
       - name: Test Pike13 API Connection
         run: |
+          # Create a separate directory for the Pike13 test
+          mkdir -p test_pike13
+          cd test_pike13
+          
           # Create a simple test script to check Pike13 API connectivity
           cat > test_pike13.go << EOF
           package main
@@ -163,7 +165,7 @@ jobs:
 
           func main() {
             // Read Pike13 credentials
-            credFile, err := os.ReadFile("./credentials/pike13_credentials.json")
+            credFile, err := os.ReadFile("../credentials/pike13_credentials.json")
             if err != nil {
               fmt.Printf("Error reading Pike13 credentials: %v\n", err)
               os.Exit(1)
@@ -234,7 +236,9 @@ jobs:
           }
           EOF
           
-          # Run the test script
+          # Initialize Go module and run the test script
+          go mod init test_pike13
+          go mod tidy
           go run test_pike13.go
 
       - name: Show environment information
