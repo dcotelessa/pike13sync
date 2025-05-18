@@ -31,6 +31,12 @@ jobs:
           echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials/credentials.json
           chmod 600 credentials/credentials.json
 
+      - name: Verify Google credentials file
+        run: |
+          echo "Verifying credentials file..."
+          ls -l credentials/
+          cat credentials/credentials.json || echo "Failed to read credentials.json"
+
       - name: Set up Pike13 credentials
         run: |
           echo '{"client_id": "${{ secrets.PIKE13_CLIENT_ID }}"}' > credentials/pike13_credentials.json
