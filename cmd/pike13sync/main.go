@@ -119,9 +119,28 @@ func calculateDateRange(testFrom, testTo string) (string, string) {
 		return testFrom, testTo
 	}
 
-	// Use current week
 	now := time.Now()
-	startOfWeek := now.AddDate(0, 0, -int(now.Weekday()))
+	
+	// Special handling for Saturday
+	if now.Weekday() == time.Saturday {
+		// Start from today (Saturday)
+		startDate := now
+		
+		// Calculate days until next Sunday (1 day from Saturday)
+		daysUntilNextSunday := 1
+		
+		// Then add 7 more days to get to the following Sunday
+		endDate := startDate.AddDate(0, 0, daysUntilNextSunday+7)
+		
+		return startDate.Format(time.RFC3339), endDate.Format(time.RFC3339)
+	}
+	
+	// For all other days, get Sunday to Sunday
+	// Calculate the most recent Sunday (start of week)
+	daysToSubtract := int(now.Weekday())
+	startOfWeek := now.AddDate(0, 0, -daysToSubtract)
+	
+	// End date is 7 days after start date (next Sunday)
 	endOfWeek := startOfWeek.AddDate(0, 0, 7)
 
 	return startOfWeek.Format(time.RFC3339), endOfWeek.Format(time.RFC3339)
