@@ -18,7 +18,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.20'
+          go-version: '1.21'  # Updated to a newer version for better compatibility
           
       - name: Create directory structure
         run: |
@@ -44,11 +44,23 @@ jobs:
           TZ=America/Los_Angeles
           EOF
 
-      - name: Test Google Calendar API Connection
+      - name: Test Google Calendar API Connection with compatible versions
         run: |
           # Create a separate directory for the Google Calendar test
           mkdir -p test_calendar
           cd test_calendar
+          
+          # Create go.mod with version constraints
+          cat > go.mod << EOF
+          module test_calendar
+
+          go 1.21
+
+          require (
+            golang.org/x/oauth2 v0.13.0
+            google.golang.org/api v0.149.0
+          )
+          EOF
           
           # Create a simple test script to check Google Calendar API connectivity
           cat > test_calendar.go << EOF
@@ -126,11 +138,10 @@ jobs:
           }
           EOF
           
-          # Initialize Go module and run the test script
-          go mod init test_calendar
-          go get golang.org/x/oauth2/google
-          go get google.golang.org/api/calendar/v3
-          go get google.golang.org/api/option
+          # Run go mod tidy to ensure dependencies are in sync
+          go mod tidy
+          
+          # Run the test script
           CALENDAR_ID="${{ secrets.CALENDAR_ID }}" go run test_calendar.go
 
       - name: Test Pike13 API Connection
@@ -138,6 +149,13 @@ jobs:
           # Create a separate directory for the Pike13 test
           mkdir -p test_pike13
           cd test_pike13
+          
+          # Create go.mod file with minimal dependencies
+          cat > go.mod << EOF
+          module test_pike13
+
+          go 1.21
+          EOF
           
           # Create a simple test script to check Pike13 API connectivity
           cat > test_pike13.go << EOF
@@ -236,9 +254,10 @@ jobs:
           }
           EOF
           
-          # Initialize Go module and run the test script
-          go mod init test_pike13
+          # Run go mod tidy to ensure dependencies are in sync
           go mod tidy
+          
+          # Run the test script
           go run test_pike13.go
 
       - name: Show environment information
