@@ -21,21 +21,21 @@ on:
           - 'true'
           - 'false'
   
-  # Run on a schedule (${schedule})
+  # Run on a schedule (daily at 2 AM UTC)
   schedule:
-    - cron: '${schedule}'
+    - cron: '0 2 * * *'
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '${go_version}'
+          go-version: '1.21'
           
       - name: Create directory structure
         run: |
@@ -47,6 +47,10 @@ jobs:
         run: |
           echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials/credentials.json
           chmod 600 credentials/credentials.json
+
+      - name: Set up Pike13 credentials
+        run: |
+          echo '{"client_id": "${{ secrets.PIKE13_CLIENT_ID }}"}' > credentials/pike13_credentials.json
 
       - name: Create .env file
         run: |
@@ -117,25 +121,3 @@ jobs:
           echo "Run completed at: $(date)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🔗 [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
-${enable_email_notifications ? `
-      - name: Send email notification on failure
-        if: failure()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: \${{ secrets.MAIL_SERVER }}
-          server_port: \${{ secrets.MAIL_PORT }}
-          username: \${{ secrets.MAIL_USERNAME }}
-          password: \${{ secrets.MAIL_PASSWORD }}
-          subject: Pike13Sync Failed
-          body: The Pike13Sync job has failed. See details at https://github.com/\${{ github.repository }}/actions/runs/\${{ github.run_id }}
-          to: \${{ secrets.NOTIFICATION_EMAIL }}
-          from: Pike13Sync Notifications` : ''}
-${enable_slack_notifications ? `
-      - name: Slack Notification
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: \${{ secrets.SLACK_WEBHOOK }}
-          SLACK_CHANNEL: ${slack_channel}
-          SLACK_COLOR: \${{ job.status == 'success' && 'good' || 'danger' }}
-          SLACK_TITLE: Pike13Sync Result
-          SLACK_MESSAGE: Pike13Sync completed with status: \${{ job.status }}` : ''}

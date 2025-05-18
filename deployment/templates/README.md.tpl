@@ -61,7 +61,7 @@ To modify the sync schedule, edit the `sync.yml` file:
 
 ```yaml
 schedule:
-  - cron: '${sync_schedule}'  # Update this pattern
+  - cron: "${sync_schedule}"  # Update this pattern
 ```
 
 ### Enabling Notifications
