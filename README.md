@@ -92,13 +92,7 @@ Pike13Sync connects to your Pike13 account API, fetches upcoming class schedule 
 
 1. Contact Pike13 support or log into your Pike13 admin dashboard
 2. Request/locate your Pike13 client ID for API access
-3. Create a file `./credentials/pike13_credentials.json` with the following content:
-   ```json
-   {
-     "client_id": "YOUR_PIKE13_CLIENT_ID"
-   }
-   ```
-   OR set the `PIKE13_CLIENT_ID` environment variable
+3. Set the `PIKE13_CLIENT_ID` environment variable
 
 ### Configuration
 
@@ -117,8 +111,7 @@ Pike13Sync connects to your Pike13 account API, fetches upcoming class schedule 
    pike13sync/
    ├── .env
    ├── credentials/
-   │   ├── credentials.json
-   │   └── pike13_credentials.json
+   │   └── credentials.json
    ├── config/
    │   └── config.json (optional)
    └── logs/
@@ -226,7 +219,6 @@ Pike13Sync can be deployed as a fully serverless solution using GitHub Actions. 
            run: |
              echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials/credentials.json
              chmod 600 credentials/credentials.json
-             echo '{"client_id": "${{ secrets.PIKE13_CLIENT_ID }}"}' > credentials/pike13_credentials.json
 
          - name: Test API connections
            run: |
@@ -274,7 +266,6 @@ Pike13Sync can be deployed as a fully serverless solution using GitHub Actions. 
            run: |
              echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials/credentials.json
              chmod 600 credentials/credentials.json
-             echo '{"client_id": "${{ secrets.PIKE13_CLIENT_ID }}"}' > credentials/pike13_credentials.json
 
          - name: Run Pike13Sync
            id: sync

@@ -42,6 +42,7 @@ jobs:
           PIKE13_CLIENT_ID=${{ secrets.PIKE13_CLIENT_ID }}
           GOOGLE_CREDENTIALS_FILE=./credentials/credentials.json
           TZ=America/Los_Angeles
+          ${{ secrets.PIKE13_URL != '' && format('PIKE13_URL={0}', secrets.PIKE13_URL) || '' }}
           EOF
 
       - name: Test Google Calendar API Connection with compatible versions

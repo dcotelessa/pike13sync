@@ -1,0 +1,141 @@
+name: Pike13 to Google Calendar Sync
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (no actual changes)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      debug:
+        description: 'Enable debug mode'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+  
+  # Run on a schedule (${schedule})
+  schedule:
+    - cron: '${schedule}'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '${go_version}'
+          
+      - name: Create directory structure
+        run: |
+          mkdir -p config
+          mkdir -p credentials
+          mkdir -p logs
+
+      - name: Set up Google credentials
+        run: |
+          echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials/credentials.json
+          chmod 600 credentials/credentials.json
+
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          CALENDAR_ID=${{ secrets.CALENDAR_ID }}
+          PIKE13_CLIENT_ID=${{ secrets.PIKE13_CLIENT_ID }}
+          GOOGLE_CREDENTIALS_FILE=./credentials/credentials.json
+          TZ=America/Los_Angeles
+          ${{ secrets.PIKE13_URL != '' && format('PIKE13_URL={0}', secrets.PIKE13_URL) || '' }}
+          EOF
+          
+      - name: Check dependencies
+        run: go mod tidy
+
+      - name: Run Pike13Sync
+        id: sync
+        run: |
+          ARGS=""
+          
+          # Add dry-run flag if requested
+          if [ "${{ github.event.inputs.dry_run || 'false' }}" == "true" ]; then
+            ARGS="$ARGS --dry-run"
+            echo "Running in DRY RUN mode (no actual changes)"
+          fi
+          
+          # Add debug flag if requested
+          if [ "${{ github.event.inputs.debug || 'false' }}" == "true" ]; then
+            ARGS="$ARGS --debug"
+            echo "Debug mode enabled"
+          fi
+          
+          # Run the application
+          echo "Running pike13sync with arguments: $ARGS"
+          go run cmd/pike13sync/main.go $ARGS | tee sync_output.txt
+          
+          # Extract key metrics for the summary
+          CREATED=$(grep -oP "Events created: \K\d+" sync_output.txt || echo "0")
+          UPDATED=$(grep -oP "Events updated: \K\d+" sync_output.txt || echo "0")
+          DELETED=$(grep -oP "Events deleted: \K\d+" sync_output.txt || echo "0")
+          UNCHANGED=$(grep -oP "Events unchanged: \K\d+" sync_output.txt || echo "0")
+          
+          # Set outputs for the summary
+          echo "created=$CREATED" >> $GITHUB_OUTPUT
+          echo "updated=$UPDATED" >> $GITHUB_OUTPUT
+          echo "deleted=$DELETED" >> $GITHUB_OUTPUT
+          echo "unchanged=$UNCHANGED" >> $GITHUB_OUTPUT
+          
+      - name: Upload logs as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: pike13sync-logs
+          path: |
+            logs/
+            sync_output.txt
+          retention-days: 14
+
+      - name: Sync Summary
+        run: |
+          echo "## Pike13Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "| ------ | ----- |" >> $GITHUB_STEP_SUMMARY
+          echo "| Events created | ${{ steps.sync.outputs.created }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Events updated | ${{ steps.sync.outputs.updated }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Events deleted | ${{ steps.sync.outputs.deleted }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Events unchanged | ${{ steps.sync.outputs.unchanged }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Run completed at: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+${enable_email_notifications ? `
+      - name: Send email notification on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: \${{ secrets.MAIL_SERVER }}
+          server_port: \${{ secrets.MAIL_PORT }}
+          username: \${{ secrets.MAIL_USERNAME }}
+          password: \${{ secrets.MAIL_PASSWORD }}
+          subject: Pike13Sync Failed
+          body: The Pike13Sync job has failed. See details at https://github.com/\${{ github.repository }}/actions/runs/\${{ github.run_id }}
+          to: \${{ secrets.NOTIFICATION_EMAIL }}
+          from: Pike13Sync Notifications` : ''}
+${enable_slack_notifications ? `
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: \${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: ${slack_channel}
+          SLACK_COLOR: \${{ job.status == 'success' && 'good' || 'danger' }}
+          SLACK_TITLE: Pike13Sync Result
+          SLACK_MESSAGE: Pike13Sync completed with status: \${{ job.status }}` : ''}

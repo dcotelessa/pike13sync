@@ -17,6 +17,7 @@ google_credentials_json = <<EOT
 EOT
 pike13_client_id     = "your_pike13_client_id"
 calendar_id          = "your_calendar_id@group.calendar.google.com"
+pike13_url           = "https://customstudio.pike13.com/api/v2/front/event_occurrences.json"  # Optional
 go_version           = "1.21"
 sync_schedule        = "0 2 * * *"  # Daily at 2 AM UTC
 

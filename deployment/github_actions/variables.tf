@@ -49,6 +49,12 @@ variable "pike13_client_id" {
   sensitive   = true
 }
 
+variable "pike13_url" {
+  description = "Pike13 API URL (optional)"
+  type        = string
+  default     = ""
+}
+
 variable "calendar_id" {
   description = "Google Calendar ID"
   type        = string

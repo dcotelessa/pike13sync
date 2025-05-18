@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"testing"
 	
 	"github.com/dcotelessa/pike13sync/internal/config"
@@ -62,32 +61,16 @@ func TestFetchEvents(t *testing.T) {
 	}))
 	defer ts.Close()
 	
-	// Create a temporary directory for test credentials
-	tmpDir := t.TempDir()
-	credsDir := filepath.Join(tmpDir, "credentials")
-	err := os.MkdirAll(credsDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create credentials directory: %v", err)
-	}
+	// Save current environment and restore it after the test
+	oldClientID := os.Getenv("PIKE13_CLIENT_ID")
+	defer os.Setenv("PIKE13_CLIENT_ID", oldClientID)
 	
-	// Create a test Pike13 credentials file
-	pike13CredsPath := filepath.Join(credsDir, "pike13_credentials.json")
-	pike13CredsContent := `{
-		"client_id": "test_client_id"
-	}`
-	
-	err = os.WriteFile(pike13CredsPath, []byte(pike13CredsContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test Pike13 credentials file: %v", err)
-	}
-	
-	// Clear any existing environment variables
-	os.Unsetenv("PIKE13_CLIENT_ID")
+	// Set environment variable for testing
+	os.Setenv("PIKE13_CLIENT_ID", "test_client_id")
 	
 	// Create test config
 	cfg := &config.Config{
-		Pike13URL:             ts.URL,
-		Pike13CredentialsPath: pike13CredsPath,
+		Pike13URL: ts.URL,
 	}
 	
 	// Create Pike13 client
@@ -130,120 +113,20 @@ func TestFetchEvents(t *testing.T) {
 		t.Errorf("Staff member data incorrect")
 	}
 	
-	// Test with environment variable client ID
-	os.Setenv("PIKE13_CLIENT_ID", "env_client_id")
-	client.SetTestHeader("X-Expected-Client-ID", "env_client_id")
-	
-	// Create a new client with an invalid credentials path to force using env var
-	cfg.Pike13CredentialsPath = filepath.Join(tmpDir, "nonexistent.json")
-	client = pike13.NewClient(cfg)
-	client.SetTestHeader("X-Expected-Client-ID", "env_client_id")
-	
-	// Test FetchEvents with env var client ID
-	response, err = client.FetchEvents(fromDate, toDate)
-	if err != nil {
-		t.Fatalf("FetchEvents with env var returned error: %v", err)
-	}
-	
-	// Verify response
-	if len(response.EventOccurrences) != 1 {
-		t.Fatalf("Expected 1 event with env var, got %d", len(response.EventOccurrences))
+	// Test error handling - missing client ID
+	os.Unsetenv("PIKE13_CLIENT_ID")
+	_, err = client.FetchEvents(fromDate, toDate)
+	if err == nil {
+		t.Error("Expected error for missing client ID, got nil")
 	}
 	
 	// Test error handling - invalid URL
+	os.Setenv("PIKE13_CLIENT_ID", "test_client_id")
 	cfg.Pike13URL = "http://invalid-url-that-does-not-exist"
 	client = pike13.NewClient(cfg)
 	
 	_, err = client.FetchEvents(fromDate, toDate)
 	if err == nil {
 		t.Error("Expected error for invalid URL, got nil")
-	}
-}
-
-// TestLoadCredentials tests the loadCredentials function
-func TestLoadCredentials(t *testing.T) {
-	// Create a temporary directory
-	tmpDir := t.TempDir()
-	credsDir := filepath.Join(tmpDir, "credentials")
-	err := os.MkdirAll(credsDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create credentials directory: %v", err)
-	}
-	
-	// Clear any existing environment variables
-	os.Unsetenv("PIKE13_CLIENT_ID")
-	
-	// Create a test Pike13 credentials file
-	pike13CredsPath := filepath.Join(credsDir, "pike13_credentials.json")
-	pike13CredsContent := `{
-		"client_id": "file_client_id"
-	}`
-	
-	err = os.WriteFile(pike13CredsPath, []byte(pike13CredsContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test Pike13 credentials file: %v", err)
-	}
-	
-	// Test with file
-	cfg := &config.Config{
-		Pike13CredentialsPath: pike13CredsPath,
-	}
-	
-	client := pike13.NewClient(cfg)
-	client.SetTestHeader("X-Expected-Client-ID", "file_client_id")
-	
-	// Create a test server that validates the client ID
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		clientID := r.URL.Query().Get("client_id")
-		expectedClientID := r.Header.Get("X-Expected-Client-ID")
-		if expectedClientID != "" && clientID != expectedClientID {
-			t.Errorf("Expected client_id=%s, got %s", expectedClientID, clientID)
-			http.Error(w, "Invalid client ID", http.StatusBadRequest)
-			return
-		}
-		
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"event_occurrences": []}`))
-	}))
-	defer ts.Close()
-	
-	cfg.Pike13URL = ts.URL
-	
-	// Test with client ID from file
-	_, err = client.FetchEvents("2025-05-01T00:00:00Z", "2025-05-31T00:00:00Z")
-	if err != nil {
-		t.Fatalf("FetchEvents with file creds returned error: %v", err)
-	}
-	
-	// Test with environment variable
-	os.Setenv("PIKE13_CLIENT_ID", "env_client_id")
-	
-	// Create a new test server for the env var test
-	tsEnv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		clientID := r.URL.Query().Get("client_id")
-		expectedClientID := r.Header.Get("X-Expected-Client-ID")
-		if expectedClientID != "" && clientID != expectedClientID {
-			t.Errorf("Expected client_id=%s, got %s", expectedClientID, clientID)
-			http.Error(w, "Invalid client ID", http.StatusBadRequest)
-			return
-		}
-		
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"event_occurrences": []}`))
-	}))
-	defer tsEnv.Close()
-	
-	// Create a new client with an invalid credentials path to force using env var
-	cfg.Pike13URL = tsEnv.URL
-	cfg.Pike13CredentialsPath = filepath.Join(tmpDir, "nonexistent.json")
-	client = pike13.NewClient(cfg)
-	client.SetTestHeader("X-Expected-Client-ID", "env_client_id")
-	
-	// Test with client ID from environment variable
-	_, err = client.FetchEvents("2025-05-01T00:00:00Z", "2025-05-31T00:00:00Z")
-	if err != nil {
-		t.Fatalf("FetchEvents with env creds returned error: %v", err)
 	}
 }

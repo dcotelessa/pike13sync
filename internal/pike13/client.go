@@ -113,24 +113,13 @@ func (c *Client) FetchEvents(fromDate, toDate string) (Pike13Response, error) {
 func (c *Client) loadCredentials() (Pike13Credentials, error) {
 	var creds Pike13Credentials
 	
-	// Check for environment variable first
-	envClientID := os.Getenv("PIKE13_CLIENT_ID")
-	if envClientID != "" {
-		creds.ClientID = envClientID
-		return creds, nil
+	// Get client ID from environment variable
+	clientID := os.Getenv("PIKE13_CLIENT_ID")
+	if clientID == "" {
+		return creds, fmt.Errorf("PIKE13_CLIENT_ID environment variable not set")
 	}
 	
-	// Fall back to file if environment variable not set
-	data, err := os.ReadFile(c.config.Pike13CredentialsPath)
-	if err != nil {
-		return creds, fmt.Errorf("error reading Pike13 credentials file: %v", err)
-	}
-	
-	err = json.Unmarshal(data, &creds)
-	if err != nil {
-		return creds, fmt.Errorf("error parsing Pike13 credentials file: %v", err)
-	}
-	
+	creds.ClientID = clientID
 	return creds, nil
 }
 

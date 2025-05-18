@@ -16,7 +16,6 @@ type Config struct {
 	CalendarID            string `json:"calendar_id"`
 	TimeZone              string `json:"time_zone"`
 	CredentialsPath       string `json:"credentials_path"`
-	Pike13CredentialsPath string `json:"pike13_credentials_path"`
 	LogPath               string `json:"log_path"`
 	DryRun                bool   `json:"dry_run"`
 	BaseDir               string `json:"-"` // Not serialized
@@ -51,8 +50,6 @@ func LoadConfig(configPath string) (*Config, error) {
 	if config.CredentialsPath == "" {
 		config.CredentialsPath = filepath.Join(credentialsDir, "credentials.json")
 	}
-	
-	config.Pike13CredentialsPath = filepath.Join(credentialsDir, "pike13_credentials.json")
 	
 	// Log path from environment variable or default
 	config.LogPath = os.Getenv("LOG_PATH")

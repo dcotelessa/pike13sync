@@ -18,7 +18,6 @@
 *.env
 credentials/
 credentials.json
-pike13_credentials.json
 *credentials*.json
 
 # Log files that may contain personal information

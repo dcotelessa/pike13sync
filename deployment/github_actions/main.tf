@@ -54,6 +54,14 @@ resource "github_actions_secret" "calendar_id" {
   plaintext_value  = var.calendar_id
 }
 
+# Optional: Add PIKE13_URL if provided
+resource "github_actions_secret" "pike13_url" {
+  count            = var.pike13_url != "" ? 1 : 0
+  repository       = local.repository_name
+  secret_name      = "PIKE13_URL"
+  plaintext_value  = var.pike13_url
+}
+
 # Optional: Email notification secrets
 resource "github_actions_secret" "mail_server" {
   count            = var.enable_email_notifications ? 1 : 0

@@ -3,7 +3,6 @@
   "calendar_id": "your_calendar_id@group.calendar.google.com",
   "time_zone": "America/Los_Angeles",
   "credentials_path": "./credentials/credentials.json",
-  "pike13_credentials_path": "./credentials/pike13_credentials.json",
   "log_path": "./logs/pike13sync.log",
   "dry_run": false
 }
