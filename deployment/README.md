@@ -52,6 +52,26 @@ In your repository:
    - Run again with dry_run set to "false"
    - Verify events are created in your Google Calendar
 
+## Terraform Deployment (Optional)
+
+If you want to automate the setup of GitHub Actions workflows and repository secrets, you can use Terraform:
+
+1. Navigate to the `deployment/github_actions` directory
+2. Create a `terraform.tfvars` file with your configuration:
+   ```hcl
+   github_token         = "your_github_token"
+   github_owner         = "your_github_username"
+   repository_name      = "pike13sync"
+   # Add other required values
+   ```
+3. Run Terraform:
+   ```bash
+   terraform init
+   terraform apply
+   ```
+
+This will set up the necessary workflow files and repository secrets automatically.
+
 ## Log Management
 
 GitHub Actions automatically manages logs for each workflow run:
